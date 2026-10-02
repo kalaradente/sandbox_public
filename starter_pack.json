@@ -1,0 +1,7 @@
+{
+ "_help": "Optional: a zip of footage + indexes (laid out as library/) on a public link. setup.sh downloads it when version changes and merges it add-only. Leave url empty to start from your own footage.",
+ "url": "",
+ "version": "",
+ "sha256": "",
+ "bytes": 0
+}

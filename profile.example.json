@@ -1,0 +1,23 @@
+{
+ "_help": "Your settings. setup.sh copies this to library/profile.json and Claude fills it in with you on the first run (it asks which accounts you'd like videos made for). It stays on your machine: git never sees library/.",
+ "name": "",
+ "house": false,
+ "onboarded": false,
+ "editor": "",
+ "gmail_drafts": "",
+ "accounts": [],
+ "pinterest_boards": [],
+ "notify": "push",
+ "phone_review": "",
+ "this_or_that": "",
+ "caption_grades": "",
+ "_accounts_example": [
+  {
+   "id": "your_handle",
+   "name": "your_handle",
+   "platform": "tiktok",
+   "what": "what this account posts",
+   "exports": "accounts/your_handle/exports"
+  }
+ ]
+}

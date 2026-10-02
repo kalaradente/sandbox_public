@@ -1,0 +1,41 @@
+{
+ "_help": "The library folders setup.sh makes (inside library/), and the folders Clip_Index.py indexes for footage (searched recursively): _internal content = everything Claude grabs, _external content = everything they bring (footage/ = the older name, still read). Each account's exports folder comes from library/profile.json. \"resolve_menu\": where Resolve_Export.py puts menu entries under Workspace > Scripts ({id}, {name}, {kind}, {batch}; a piece cut to a song goes in with_song, where {song} = the song's \"menu\" name or its title); \"songs\": where each song's markers entry goes (songs.py). \"resolve_import\": the library folders Resolve > Scripts > Import_Library mirrors as bins.",
+ "source_folders": [
+  "_internal content",
+  "_external content",
+  "footage"
+ ],
+ "folders": [
+  "_internal content/photos",
+  "_external content",
+  "_pasture",
+  "_captions",
+  "_inbox",
+  "_audio",
+  "_stills/candidates",
+  "_stills/pinterest",
+  "_reference/edits",
+  "_reference/posted",
+  "_recipes",
+  "_to_delete",
+  "_lab/rounds",
+  "_lab/keep",
+  "_lab/perfect children/_study",
+  "_lab/source",
+  "_lab/stills",
+  "_lab/studies",
+  "accounts"
+ ],
+ "resolve_menu": {
+  "path": "sandbox/{name}/{kind}",
+  "with_song": "{song}",
+  "with_sound": "With sound",
+  "no_song": "No song",
+  "songs": "sandbox/Songs"
+ },
+ "resolve_import": [
+  "_internal content",
+  "_external content",
+  "footage"
+ ]
+}

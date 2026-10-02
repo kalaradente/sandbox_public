@@ -1,0 +1,12 @@
+# Python packages for sandbox (install: python3 -m pip install -r requirements.txt; setup.sh does it).
+# Versions are what the Mac ran at v0.3; newer usually works.
+opencv-python-headless>=5.0
+numpy>=2.0
+pillow>=12.0
+yt-dlp[default,curl-cffi]>=2026.8.19
+faster-whisper>=1.2
+gallery-dl>=1.32
+# visual search (optional: finding footage by how it looks); the model itself downloads on first use (~150 MB)
+onnxruntime>=1.20
+tokenizers>=0.20
+huggingface_hub>=0.30

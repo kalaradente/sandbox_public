@@ -1,0 +1,478 @@
+{
+ "_help": "Concept tags: a small fixed vocabulary so a shortlist is a filter, not a read of every one-liner. Each tag lists the words that suggest it (whole words; a trailing * matches any ending: \"nostalgi*\") in a clip's one-liner, description, feel and colour. concept_tags.py uses them to give untagged clips and pins a first set of tags; whoever writes a new one-liner also writes its tags from this list (add a tag here when a concept keeps coming up). Tags describe the clip as a whole: a shot inside it can still differ, so the shot's moment is checked too.",
+ "light": {
+  "golden-hour": [
+   "golden hour",
+   "golden light",
+   "gold light",
+   "warm low sun",
+   "low sun",
+   "sun-drenched",
+   "sunlit"
+  ],
+  "sunset": [
+   "sunset",
+   "sundown",
+   "setting sun",
+   "dusk sun",
+   "pink sky",
+   "orange sky"
+  ],
+  "blue-hour": [
+   "blue hour",
+   "deep-blue sky",
+   "deep blue sky",
+   "twilight",
+   "dusk"
+  ],
+  "night": [
+   "night",
+   "2am",
+   "3am",
+   "midnight",
+   "after dark",
+   "dark street",
+   "streetlamp",
+   "streetlight",
+   "moonlight"
+  ],
+  "daylight": [
+   "daylight",
+   "sunny day",
+   "bright day",
+   "midday",
+   "afternoon",
+   "blue sky"
+  ],
+  "morning": [
+   "morning",
+   "sunrise",
+   "dawn",
+   "breakfast"
+  ],
+  "neon": [
+   "neon",
+   "laser",
+   "strobe",
+   "led",
+   "club light",
+   "coloured light",
+   "colored light"
+  ],
+  "candlelight": [
+   "candle",
+   "lantern",
+   "fairy light",
+   "string light",
+   "fireplace",
+   "lamp glow"
+  ],
+  "fireworks": [
+   "firework",
+   "sparkler"
+  ],
+  "snow": [
+   "snow",
+   "winter",
+   "frost"
+  ],
+  "rain": [
+   "rain",
+   "wet window",
+   "raindrop"
+  ],
+  "fog": [
+   "fog",
+   "mist",
+   "haze"
+  ]
+ },
+ "place": {
+  "city": [
+   "city",
+   "street",
+   "downtown",
+   "skyline",
+   "crosswalk",
+   "subway",
+   "metro",
+   "avenue",
+   "rooftop",
+   "bridge"
+  ],
+  "new-york": [
+   "new york",
+   "nyc",
+   "manhattan",
+   "brooklyn",
+   "soho",
+   "empire state",
+   "times square",
+   "the met"
+  ],
+  "paris": [
+   "paris",
+   "eiffel"
+  ],
+  "europe": [
+   "italy",
+   "rome",
+   "amalfi",
+   "positano",
+   "greece",
+   "santorini",
+   "mediterranean",
+   "spain",
+   "lisbon",
+   "chefchaouen",
+   "courtyard",
+   "piazza",
+   "euro",
+   "london",
+   "cobbled"
+  ],
+  "beach": [
+   "beach",
+   "ocean",
+   "sea",
+   "coast",
+   "surf",
+   "shore",
+   "waves",
+   "cliff"
+  ],
+  "water": [
+   "underwater",
+   "swim*",
+   "lake",
+   "river",
+   "pool",
+   "boat*",
+   "splash*",
+   "dive*",
+   "diving",
+   "waterfall"
+  ],
+  "road": [
+   "drive",
+   "driving",
+   "drives",
+   "car",
+   "cars",
+   "road*",
+   "highway",
+   "windshield",
+   "dashboard",
+   "convertible",
+   "taillight*",
+   "headlight*",
+   "tunnel",
+   "traffic",
+   "passenger seat"
+  ],
+  "train": [
+   "train",
+   "railway",
+   "subway car"
+  ],
+  "nature": [
+   "field",
+   "meadow",
+   "forest",
+   "trees",
+   "mountain",
+   "wildflower",
+   "garden",
+   "flowers",
+   "hills",
+   "countryside",
+   "desert"
+  ],
+  "home": [
+   "bedroom",
+   "bed",
+   "kitchen",
+   "living room",
+   "at home",
+   "sheets",
+   "sofa",
+   "couch",
+   "indoors",
+   "her room",
+   "his room"
+  ],
+  "club": [
+   "club",
+   "rave",
+   "dj",
+   "warehouse",
+   "dance floor"
+  ],
+  "concert": [
+   "concert*",
+   "festival*",
+   "stage",
+   "gig",
+   "arena",
+   "the band"
+  ],
+  "party": [
+   "party",
+   "parties",
+   "house party",
+   "pool party",
+   "celebrat*",
+   "toast*",
+   "drinks"
+  ],
+  "fair": [
+   "fair",
+   "carnival",
+   "ferris",
+   "amusement",
+   "funfair"
+  ],
+  "stadium": [
+   "stadium",
+   "football",
+   "friday night lights",
+   "bleachers"
+  ]
+ },
+ "people": {
+  "couple": [
+   "couple",
+   "lovers",
+   "boyfriend",
+   "girlfriend",
+   "him and her",
+   "the two of them",
+   "brad and angelina",
+   "mr. & mrs. smith",
+   "rory and jess",
+   "noah and allie",
+   "husband",
+   "wife",
+   "romance"
+  ],
+  "kiss": [
+   "kiss*"
+  ],
+  "friends": [
+   "friends",
+   "best friend",
+   "group of",
+   "girls night",
+   "the boys",
+   "arm in arm",
+   "together laughing"
+  ],
+  "girl": [
+   "girl*",
+   "woman",
+   "women",
+   "her",
+   "she"
+  ],
+  "guy": [
+   "guy*",
+   "man",
+   "men",
+   "boy*",
+   "his",
+   "he"
+  ],
+  "crowd": [
+   "crowd",
+   "audience",
+   "fans"
+  ],
+  "no-people": [
+   "empty",
+   "no one",
+   "nobody",
+   "landscape",
+   "scenery",
+   "skyline only"
+  ],
+  "face": [
+   "face",
+   "smile",
+   "smiling",
+   "eye contact",
+   "looks at the camera",
+   "looks into the camera",
+   "close-up",
+   "portrait"
+  ],
+  "dancing": [
+   "danc*",
+   "twirl*",
+   "spin*",
+   "tango"
+  ],
+  "laughing": [
+   "laugh*",
+   "giggl*"
+  ]
+ },
+ "look": {
+  "film": [
+   "scene from",
+   "la la land",
+   "mr. & mrs. smith",
+   "mr. and mrs. smith",
+   "the notebook",
+   "notebook",
+   "gilmore girls",
+   "project x",
+   "10 things",
+   "pretty woman",
+   "fight club",
+   "edward scissorhands",
+   "virgin suicides",
+   "donnie darko"
+  ],
+  "celebrity": [
+   "celebrit*",
+   "premiere*",
+   "red carpet*",
+   "paparazzi",
+   "brad pitt",
+   "angelina",
+   "zendaya",
+   "jfk",
+   "winona",
+   "press wall"
+  ],
+  "lo-fi": [
+   "lo-fi",
+   "lofi",
+   "digicam",
+   "camcorder",
+   "vhs",
+   "tape",
+   "grainy",
+   "film camera",
+   "disposable",
+   "4:3",
+   "home video",
+   "2000s",
+   "2006"
+  ],
+  "slow-motion": [
+   "slow motion",
+   "slow-motion",
+   "slo-mo"
+  ],
+  "pov": [
+   "pov",
+   "first-person",
+   "handheld point of view",
+   "from the passenger seat",
+   "from the driver"
+  ]
+ },
+ "mood": {
+  "romantic": [
+   "romantic",
+   "in love",
+   "love",
+   "tender",
+   "intimate",
+   "adoring",
+   "romance"
+  ],
+  "nostalgic": [
+   "nostalgi*",
+   "memory",
+   "memories",
+   "summer before",
+   "youth",
+   "used to",
+   "back then",
+   "old tape",
+   "camcorder"
+  ],
+  "euphoric": [
+   "euphori*",
+   "hype",
+   "wild",
+   "energy",
+   "ecstatic",
+   "arms up",
+   "jump*",
+   "rush",
+   "chaos",
+   "explosion",
+   "explod*"
+  ],
+  "calm": [
+   "calm",
+   "quiet",
+   "peaceful",
+   "slow",
+   "soft",
+   "gentle",
+   "still"
+  ],
+  "cozy": [
+   "cozy",
+   "sweater*",
+   "blanket*",
+   "fall",
+   "autumn",
+   "fireplace",
+   "knit*"
+  ],
+  "lonely": [
+   "lonely",
+   "alone",
+   "solitude",
+   "melanchol*",
+   "sad",
+   "longing"
+  ],
+  "glamour": [
+   "glamour",
+   "glamorous",
+   "elegant",
+   "luxury",
+   "gown",
+   "chic",
+   "iconic"
+  ],
+  "cool": [
+   "cool",
+   "rebellious",
+   "confident",
+   "swagger",
+   "menacing"
+  ],
+  "conflict": [
+   "fight*",
+   "gun*",
+   "shootout",
+   "argument",
+   "war",
+   "angry",
+   "brawl",
+   "standoff",
+   "explod*",
+   "explosion"
+  ],
+  "summer": [
+   "summer",
+   "sunscreen",
+   "beach day",
+   "heat"
+  ],
+  "playful": [
+   "playful",
+   "silly",
+   "goofy",
+   "fun",
+   "cheeky"
+  ]
+ }
+}

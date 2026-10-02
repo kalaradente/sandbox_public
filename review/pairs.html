@@ -1,0 +1,195 @@
+<meta charset="utf-8">
+<title>This or That</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* One look on purpose, the same dark screening room as the review pages (review/index.html, review/phone.html):
+     two pictures side by side fill the screen, everything else stays out of their way. */
+  :root {
+    color-scheme: dark;
+    --bg: #0d0e10; --panel: #16181b; --raise: #1e2125; --line: #2a2d32; --text: #eceef1; --muted: #979ea7;
+    --pick: #e0b341; --ok: #3fb27f; --bad: #e5534b; --focus: #8ab4ff;
+    --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.45 var(--sans); margin: 0; padding-inline: 16px; -webkit-tap-highlight-color: transparent; }
+  .wrap { max-width: 760px; margin: 0 auto; padding-block: 12px 28px; display: flex; flex-direction: column; gap: 12px; }
+
+  header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  header h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0; }
+  select { flex: 1 1 140px; min-width: 0; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font: 500 14px var(--mono); }
+  .count { font: 500 12px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .count b { color: var(--text); font-weight: 500; }
+  .bar { height: 3px; background: var(--panel); border-radius: 2px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--pick); transition: width .2s; }
+
+  main { display: flex; flex-direction: column; gap: 12px; }
+  .ask { font-size: 17px; font-weight: 500; margin: 0; text-wrap: balance; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { position: relative; padding: 0; border: 2px solid transparent; border-radius: 14px; overflow: hidden; background: #000; cursor: pointer; aspect-ratio: 2 / 3; min-width: 0; }
+  .card img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .card.sel, .line.sel { border-color: var(--pick); }
+  .card.dim, .line.dim { opacity: .35; }
+  .one { background: #000; border-radius: 14px; overflow: hidden; display: grid; place-items: center; }
+  .one img { max-height: 46vh; max-width: 100%; display: block; }
+  .lines { display: flex; flex-direction: column; gap: 10px; }
+  .line { border: 2px solid var(--line); background: var(--raise); color: var(--text); border-radius: 14px; padding: 16px 14px; font: 500 19px/1.3 var(--sans); text-align: left; cursor: pointer; text-wrap: balance; }
+  .rest { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .r { border: 1px solid var(--line); background: var(--raise); color: var(--muted); border-radius: 12px; padding: 12px 6px; font: 600 15px var(--sans); cursor: pointer; }
+  .r.sel { border-color: var(--pick); color: var(--pick); }
+  input[type=text] { width: 100%; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; font: 15px/1.4 var(--sans); }
+  button:focus-visible, input:focus, select:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .back { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 10px; padding: 9px 14px; font: 500 14px var(--sans); cursor: pointer; }
+  .back:disabled { opacity: .35; }
+  .status { font-size: 13px; color: var(--muted); min-height: 1.4em; text-align: right; }
+  .status.err { color: var(--bad); }
+  .done { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .done h2 { margin: 0; font-size: 18px; }
+  .done code { font: 500 14px var(--mono); background: var(--raise); padding: 2px 6px; border-radius: 6px; }
+  .empty { color: var(--muted); padding: 40px 0; text-align: center; }
+  @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>This or that</h1>
+    <select id="deck" aria-label="Deck"></select>
+    <span class="count" id="count"></span>
+  </header>
+  <div class="bar" aria-hidden="true"><i id="fill"></i></div>
+  <main id="main"><p class="empty" id="empty">Loading decks…</p></main>
+</div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const NAME = { a: "Left", b: "Right", neither: "Neither", both: "Both" };
+  let db = null, decks = {}, picks = {}, cur = null, idx = 0, shownAt = 0, busy = false;
+  const chains = {}, sending = {}, held = {};  // one write at a time per pick doc; while one is on its way, held = what the database has
+
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  };
+  const pairs = () => (decks[cur] && decks[cur].pairs) || [];
+  const key = (p) => cur + "__" + p.id;
+  const got = (p) => picks[key(p)];
+  const firstOpen = () => { const i = pairs().findIndex((p) => !got(p)); return i < 0 ? pairs().length : i; };
+
+  function renderDecks() {
+    const names = Object.keys(decks).sort((a, b) => (decks[b].pushed || "").localeCompare(decks[a].pushed || ""));
+    const sel = $("#deck"); sel.innerHTML = "";
+    names.forEach((n) => { const o = document.createElement("option"); o.value = n; o.textContent = decks[n].title || n; sel.appendChild(o); });
+    if (!names.length) { $("#main").innerHTML = '<p class="empty">No deck sent yet. Ask Claude to deal one.</p>'; $("#count").textContent = ""; return; }
+    if (!decks[cur]) { const saved = store.get("deck"); cur = decks[saved] ? saved : names[0]; idx = firstOpen(); }
+    sel.value = cur; render();
+  }
+
+  function render() {
+    const ps = pairs(), n = ps.filter(got).length;
+    store.set("deck", cur);
+    $("#count").innerHTML = `<b>${n}</b> / ${ps.length}`;
+    $("#fill").style.width = (ps.length ? 100 * n / ps.length : 0) + "%";
+    const main = $("#main");
+    if (idx >= ps.length) {
+      const tally = ["a", "b", "neither", "both"].map((k) => `${NAME[k].toLowerCase()} ${ps.filter((p) => got(p) && got(p).pick === k).length}`).join(" · ");
+      main.innerHTML = `<div class="done"><h2>${n === ps.length ? "All " + ps.length + " picked" : n + " of " + ps.length + " picked"}</h2>
+        <div>${tally}</div><div>In the Claude app, tell Claude <code>score this or that</code>.</div></div>
+        <div class="foot"><button class="back" id="back">‹ Back</button><span></span></div>`;
+      $("#back").onclick = () => go(ps.length - 1);
+      return;
+    }
+    const p = ps[idx], mine = got(p);
+    if (main.dataset.id !== key(p)) {
+      main.dataset.id = key(p);
+      main.innerHTML = p.kind === "caption"
+        ? `<div class="one"><img id="pic" alt="The picture the caption goes on"></div>
+           <p class="ask">Which caption?</p>
+           <div class="lines"><button class="line" data-k="a"></button><button class="line" data-k="b"></button></div>`
+        : `<p class="ask">Which would you use?</p>
+           <div class="two"><button class="card" data-k="a" aria-label="Left picture"><img alt=""></button><button class="card" data-k="b" aria-label="Right picture"><img alt=""></button></div>`;
+      main.insertAdjacentHTML("beforeend", `
+        <div class="rest"><button class="r" data-k="neither">Neither</button><button class="r" data-k="both">Both</button></div>
+        <input type="text" id="note" placeholder="A note first, if you have one. Then tap." autocomplete="off">
+        <div class="foot"><button class="back" id="back">‹ Back</button><span class="status" id="status" role="status"></span></div>`);
+      if (p.kind === "caption") {
+        $("#pic").src = p.img;
+        main.querySelectorAll(".line").forEach((b) => { b.textContent = p[b.dataset.k]; });
+      } else {
+        main.querySelectorAll(".card").forEach((b) => { b.querySelector("img").src = p[b.dataset.k]; });
+      }
+      main.querySelectorAll("[data-k]").forEach((b) => b.onclick = () => pick(b.dataset.k));
+      $("#back").onclick = () => go(idx - 1);
+      $("#note").value = (mine && mine.note) || "";
+      shownAt = performance.now();
+      const nx = ps[idx + 1];  // the next pair's pictures, fetched while this one is looked at
+      if (nx) (nx.kind === "caption" ? [nx.img] : [nx.a, nx.b]).forEach((u) => { const im = new Image(); im.src = u; });
+    }
+    main.querySelectorAll("[data-k]").forEach((b) => {
+      const on = mine && mine.pick === b.dataset.k, side = b.classList.contains("card") || b.classList.contains("line");
+      b.classList.toggle("sel", !!on);
+      b.classList.toggle("dim", !!(mine && side && !on && (mine.pick === "a" || mine.pick === "b")));
+    });
+    $("#back").disabled = idx === 0;
+    const st = $("#status");
+    if (!st.dataset.hold) { st.className = "status"; st.textContent = mine ? "Picked: " + NAME[mine.pick] + ". Tap to change." : ""; }
+  }
+
+  function go(i) { if (i < 0 || i > pairs().length) return; idx = i; busy = false; $("#main").dataset.id = ""; render(); }
+
+  async function pick(k) {
+    if (busy) return;
+    if (!db) return flash("Can't save here: open this page in claude.ai.");
+    const p = pairs()[idx], before = got(p);
+    const body = { deck: cur, id: p.id, pick: k, note: $("#note").value.trim(), at: new Date().toISOString(),
+                   ms: before ? (before.ms ?? null) : Math.round(performance.now() - shownAt), changed: !!before };
+    busy = true; const saved = write(key(p), body); render();
+    try {
+      await saved;
+      setTimeout(() => { if (pairs()[idx] === p) go(idx + 1); }, 260);  // one step on from the pair that was picked: never a second one when the page has moved meanwhile
+    } catch (err) {
+      busy = false; render(); flash("Didn't save (" + (err && err.code || "error") + "). Tap again.");
+    }
+  }
+
+  function write(k, body) {  // a save that fails never blocks the next one (the desk page's queue, review/index.html, does the same), and the pair goes back to what the database has
+    if (!sending[k]) held[k] = picks[k];
+    sending[k] = (sending[k] || 0) + 1; picks[k] = body;
+    const p = (chains[k] || Promise.resolve()).then(() => db.doc("picks/" + k).set(body)).then(
+      () => { sending[k]--; held[k] = body; },
+      (err) => { if (!--sending[k]) { if (held[k]) picks[k] = held[k]; else delete picks[k]; } throw err; });
+    chains[k] = p.catch(() => {});
+    return p;
+  }
+
+  function flash(msg) {
+    const st = $("#status"); if (!st) return;
+    st.className = "status err"; st.textContent = msg; st.dataset.hold = "1";
+    setTimeout(() => { delete st.dataset.hold; render(); }, 2400);
+  }
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.target.tagName === "INPUT" || ev.target.tagName === "SELECT" || idx >= pairs().length) return;
+    const k = { ArrowLeft: "a", ArrowRight: "b", ArrowDown: "neither", ArrowUp: "both" }[ev.key];
+    if (k) { ev.preventDefault(); pick(k); } else if (ev.key === "Backspace") go(idx - 1);
+  });
+
+  $("#deck").onchange = (ev) => { cur = ev.target.value; go(firstOpen()); };
+
+  (async () => {
+    db = await window.claude?.use?.("db");
+    if (!db) { $("#empty").textContent = "Open this page in claude.ai or the Claude app to load your decks."; return; }
+    const fail = (err) => { $("#main").innerHTML = `<p class="empty">Couldn't load (${err && err.code || "error"}). Reload to try again.</p>`; };
+    let first = true;
+    db.collection("picks").onSnapshot((snap) => {
+      let news = false;  // picks the page didn't have; the reviewer's own pick coming back while it is saved is not news
+      snap.docs.forEach((d) => { const v = d.data(), mine = picks[d.id]; if (!(mine && mine.at > (v.at || ""))) { if (mine !== v && !sending[d.id]) news = true; picks[d.id] = v; } });
+      if (cur && first && news) { first = false; go(firstOpen()); }  // an own pick coming back used to count as the first: with the step after the pick, two steps
+    }, fail);
+    db.collection("decks").onSnapshot((snap) => { decks = {}; snap.docs.forEach((d) => { decks[d.id] = d.data(); }); renderDecks(); }, fail);
+  })();
+})();
+</script>

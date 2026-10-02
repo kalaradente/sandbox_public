@@ -1,0 +1,175 @@
+<meta charset="utf-8">
+<title>Caption Grades</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* One look on purpose, the same dark screening room as the other review pages (review/index.html, phone.html, pairs.html):
+     a plain list, each line read like a caption on a video, the grade one tap away. */
+  :root {
+    color-scheme: dark;
+    --bg: #0d0e10; --panel: #16181b; --raise: #1e2125; --line: #2a2d32; --text: #eceef1; --muted: #979ea7;
+    --yes: #3fb27f; --almost: #e0b341; --no: #e5534b; --focus: #8ab4ff;
+    --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.45 var(--sans); margin: 0; padding-inline: 16px; -webkit-tap-highlight-color: transparent; }
+  .wrap { max-width: 720px; margin: 0 auto; padding-block: 12px 40px; display: flex; flex-direction: column; gap: 14px; }
+
+  header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg); padding-block: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0; }
+  select { flex: 1 1 160px; min-width: 0; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font: 500 14px var(--mono); }
+  .tally { font: 500 12px var(--mono); color: var(--muted); display: flex; gap: 10px; font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+  .tally b { color: var(--text); font-weight: 500; }
+
+  .intro { color: var(--muted); font-size: 14px; margin: 0; max-width: 60ch; }
+  ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .group { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 14px 0 0; }
+  .row { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .row.yes { border-left-color: var(--yes); } .row.almost { border-left-color: var(--almost); } .row.no { border-left-color: var(--no); }
+  .row.no .text { color: var(--muted); }
+  .text { font-size: 19px; line-height: 1.3; font-weight: 500; margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
+  .meta { font-size: 12.5px; color: var(--muted); margin: 0; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .b { border: 1px solid var(--line); background: var(--raise); border-radius: 10px; padding: 10px 6px; font: 600 14px var(--sans); cursor: pointer; }
+  .b.yes { color: var(--yes); } .b.almost { color: var(--almost); } .b.no { color: var(--no); }
+  .b.yes.sel { background: var(--yes); border-color: var(--yes); color: #04150d; }
+  .b.almost.sel { background: var(--almost); border-color: var(--almost); color: #1b1503; }
+  .b.no.sel { background: var(--no); border-color: var(--no); color: #1c0504; }
+  input[type=text] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font: 15px/1.4 var(--sans); }
+  button:focus-visible, input:focus, select:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+  /* The status hangs under the sticky header, so "Didn't save" is in view however far down the list the reviewer is; it lies over the list for a moment and moves nothing. */
+  .status { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg); border-bottom: 1px solid var(--line); padding-block: 7px; font-size: 13px; color: var(--muted); margin: 0; }
+  .status:empty { display: none; }
+  .status.err { color: var(--no); }
+  .done { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .done code { font: 500 14px var(--mono); background: var(--raise); padding: 2px 6px; border-radius: 6px; }
+  .empty { color: var(--muted); padding: 40px 0; text-align: center; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Caption grades</h1>
+    <select id="set" aria-label="Set"></select>
+    <div class="tally" id="tally"></div>
+    <p class="status" id="status" role="status"></p>
+  </header>
+  <main id="main"><p class="empty" id="empty">Loading captions…</p></main>
+</div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const GRADES = [["yes", "Yes"], ["almost", "Almost"], ["no", "No"]];
+  let db = null, sets = {}, grades = {}, cur = null, built = null;
+  const chains = {}, timers = {};  // one write at a time per grade doc; a note is saved a moment after typing stops
+  const sending = {}, held = {}, unsent = {};  // while a write is on its way, held = what the database has; unsent = a note whose save failed, still in its box
+
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  };
+  const lines = () => (sets[cur] && sets[cur].lines) || [];
+  const key = (l) => cur + "__" + l.id;
+  const got = (l) => grades[key(l)] || {};
+  const likes = (n) => Number(n) ? Number(n).toLocaleString("en-US") + " likes" : "";
+
+  function renderSets() {
+    const size = (n) => (sets[n].lines || []).length;  // sent in the same moment: the shorter set first
+    const names = Object.keys(sets).sort((a, b) => (sets[a].pushed || "").slice(0, 16).localeCompare((sets[b].pushed || "").slice(0, 16)) || size(a) - size(b));
+    const sel = $("#set"); sel.innerHTML = "";
+    names.forEach((n) => { const o = document.createElement("option"); o.value = n; o.textContent = sets[n].title || n; sel.appendChild(o); });
+    if (!names.length) { $("#main").innerHTML = '<p class="empty">No captions sent yet. Ask Claude to send a set.</p>'; $("#tally").textContent = ""; return; }
+    if (!sets[cur]) { const saved = store.get("set"); cur = sets[saved] ? saved : names[0]; }
+    sel.value = cur; build(); paint();
+  }
+
+  function build() {  // the list is built once per set, so a note being typed is never redrawn
+    if (built === cur + "|" + (sets[cur].pushed || "")) return;
+    built = cur + "|" + (sets[cur].pushed || ""); store.set("set", cur);
+    const main = $("#main"); main.innerHTML = "";
+    if (sets[cur].intro) { const p = document.createElement("p"); p.className = "intro"; p.textContent = sets[cur].intro; main.appendChild(p); }
+    let ol = null, group = null;
+    lines().forEach((l) => {
+      if (!ol || (l.group || "") !== group) {
+        group = l.group || "";
+        if (group) { const h = document.createElement("h2"); h.className = "group"; h.textContent = group; main.appendChild(h); }
+        ol = document.createElement("ol"); main.appendChild(ol);
+      }
+      const li = document.createElement("li"); li.className = "row"; li.dataset.id = l.id;
+      const t = document.createElement("p"); t.className = "text"; t.textContent = l.text; li.appendChild(t);
+      const meta = [l.under ? "under " + l.under : "", likes(l.likes)].filter(Boolean).join(" · ");
+      if (meta) { const m = document.createElement("p"); m.className = "meta"; m.textContent = meta; li.appendChild(m); }
+      const g = document.createElement("div"); g.className = "g";
+      GRADES.forEach(([k, label]) => { const b = document.createElement("button"); b.className = "b " + k; b.dataset.k = k; b.textContent = label; b.onclick = () => grade(l, k); g.appendChild(b); });
+      li.appendChild(g);
+      const n = document.createElement("input"); n.type = "text"; n.id = "note-" + l.id; n.placeholder = "Your version, or why"; n.autocomplete = "off";
+      n.setAttribute("aria-label", "Note on: " + l.text);
+      n.value = got(l).note || ""; delete unsent[key(l)];
+      n.oninput = () => { clearTimeout(timers[l.id]); timers[l.id] = setTimeout(() => note(l), 1200); };
+      n.onblur = () => note(l);
+      li.appendChild(n); ol.appendChild(li);
+    });
+    const d = document.createElement("div"); d.id = "done"; main.appendChild(d);
+  }
+
+  function paint() {
+    const n = { yes: 0, almost: 0, no: 0 }, ls = lines();
+    ls.forEach((l) => {
+      const v = got(l), li = document.querySelector(`.row[data-id="${l.id}"]`); if (!li) return;
+      if (n[v.grade] !== undefined) n[v.grade]++;
+      li.className = "row " + (v.grade || "");
+      li.querySelectorAll(".b").forEach((b) => { const on = b.dataset.k === v.grade; b.classList.toggle("sel", on); b.setAttribute("aria-pressed", String(on)); });
+      const inp = li.querySelector("input"); if (document.activeElement !== inp && inp.value !== (v.note || "") && !timers[l.id] && !unsent[key(l)]) inp.value = v.note || "";
+    });
+    const done = n.yes + n.almost + n.no;
+    $("#tally").innerHTML = `<span><b>${done}</b>/${ls.length}</span><span style="color:var(--yes)">${n.yes} yes</span><span style="color:var(--almost)">${n.almost} almost</span><span style="color:var(--no)">${n.no} no</span>`;
+    const d = $("#done");
+    if (d) d.innerHTML = done === ls.length && ls.length ? `<div class="done">All ${ls.length} graded. In the Claude app, tell Claude <code>apply the caption grades</code>.</div>` : "";
+  }
+
+  function write(l, body) {  // a save that fails never blocks the next one (the desk page's queue, review/index.html, does the same), and the line goes back to what the database has
+    const k = key(l);
+    if (!sending[k]) held[k] = grades[k];
+    sending[k] = (sending[k] || 0) + 1; grades[k] = body; paint();
+    const p = (chains[k] || Promise.resolve()).then(() => db.doc("grades/" + k).set(body)).then(
+      () => { sending[k]--; held[k] = body; delete unsent[k]; },
+      (err) => {  // the grade is unlit and uncounted again; what was typed stays in the box, and the next tap, or leaving the box again, sends it
+        if (!--sending[k]) { if (held[k]) grades[k] = held[k]; else delete grades[k]; unsent[k] = true; paint(); }
+        throw err;
+      });
+    chains[k] = p.catch(() => {});
+    return p;
+  }
+  const body = (l, grade, noteText) => ({ set: cur, id: l.id, text: l.text, grade, note: noteText, at: new Date().toISOString() });
+  const noteOf = (l) => { const i = document.getElementById("note-" + l.id); return i ? i.value.trim() : ""; };
+
+  function grade(l, k) {
+    if (!db) return say("Can't save here: open this page in claude.ai.", true);
+    write(l, body(l, got(l).grade === k ? "" : k, noteOf(l)))  // tap the lit one again to clear it
+      .catch((err) => say("Didn't save (" + (err && err.code || "error") + "). Tap again.", true));
+  }
+  function note(l) {
+    clearTimeout(timers[l.id]); delete timers[l.id];
+    if (!db || noteOf(l) === (got(l).note || "")) return;
+    write(l, body(l, got(l).grade || "", noteOf(l))).then(() => say("Note saved."), (err) => say("Note didn't save (" + (err && err.code || "error") + ").", true));
+  }
+  function say(msg, err) {
+    const st = $("#status"); st.className = "status" + (err ? " err" : ""); st.textContent = msg;
+    clearTimeout(say.t); say.t = setTimeout(() => { st.textContent = ""; }, 2400);
+  }
+
+  $("#set").onchange = (ev) => { cur = ev.target.value; build(); paint(); window.scrollTo(0, 0); };
+
+  (async () => {
+    db = await window.claude?.use?.("db");
+    if (!db) { $("#empty").textContent = "Open this page in claude.ai or the Claude app to load the captions."; return; }
+    const fail = (err) => { $("#main").innerHTML = `<p class="empty">Couldn't load (${err && err.code || "error"}). Reload to try again.</p>`; };
+    db.collection("grades").onSnapshot((snap) => {
+      snap.docs.forEach((d) => { const v = d.data(), mine = grades[d.id]; if (!(mine && mine.at > (v.at || ""))) grades[d.id] = v; });
+      if (cur) paint();
+    }, fail);
+    db.collection("sets").onSnapshot((snap) => { sets = {}; snap.docs.forEach((d) => { sets[d.id] = d.data(); }); renderSets(); }, fail);
+  })();
+})();
+</script>

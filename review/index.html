@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab review</title>
+<style>
+  :root {
+    --bg: #0e0f11; --panel: #17191c; --line: #2a2d32; --text: #eceef1; --muted: #9aa0a8;
+    --keep: #3fb27f; --perfect: #e0b341; --delete: #e5534b; --noted: #6ea8fe; --focus: #8ab4ff;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { --bg: #f5f6f7; --panel: #ffffff; --line: #dfe2e6; --text: #15171a; --muted: #5d646d; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 650; }
+  select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font: inherit; }
+  .progress { color: var(--muted); }
+  .progress b { color: var(--text); }
+  .keys { margin-left: auto; color: var(--muted); font-size: 12px; }
+  kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font: 11px ui-monospace, monospace; color: var(--text); }
+  main { display: grid; grid-template-columns: 260px minmax(0, 1fr) 340px; height: calc(100% - 57px); }
+  #list { border-right: 1px solid var(--line); overflow-y: auto; }
+  .item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .item:hover { background: var(--panel); }
+  .item.sel { background: var(--panel); box-shadow: inset 3px 0 0 var(--focus); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex: none; border: 1.5px solid var(--muted); }
+  .dot.kept { background: var(--keep); border-color: var(--keep); } .dot.perfect { background: var(--perfect); border-color: var(--perfect); }
+  .dot.deleted { background: var(--delete); border-color: var(--delete); } .dot.noted { background: var(--noted); border-color: var(--noted); }
+  .item .id { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .item .sub { color: var(--muted); font-size: 12px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  #stage { display: flex; align-items: center; justify-content: center; padding: 16px; min-height: 0; }
+  video { width: 100%; height: 100%; object-fit: contain; border-radius: 10px; background: #000; }
+  .gone { color: var(--muted); text-align: center; }
+  #side { border-left: 1px solid var(--line); padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+  #side h2 { margin: 0; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; font-size: 12px; color: var(--muted); }
+  .chip.status { color: var(--text); font-weight: 600; }
+  .caption { font-size: 15px; }
+  .story { color: var(--muted); font-size: 13px; white-space: pre-wrap; }
+  .btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  button { font: inherit; font-weight: 600; border-radius: 9px; padding: 10px 8px; cursor: pointer; border: 1.5px solid var(--line); background: var(--panel); color: var(--text); }
+  button:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  button.keep.on { background: var(--keep); border-color: var(--keep); color: #06150d; }
+  button.perfect.on { background: var(--perfect); border-color: var(--perfect); color: #1d1602; }
+  button.delete.on { background: var(--delete); border-color: var(--delete); color: #1f0404; }
+  button.keep:hover { border-color: var(--keep); } button.perfect:hover { border-color: var(--perfect); } button.delete:hover { border-color: var(--delete); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .topics { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  button.topic { font-weight: 500; font-size: 13px; padding: 5px 10px; border-radius: 999px; color: var(--muted); }
+  button.topic kbd { margin-right: 6px; color: inherit; }
+  button.topic:hover { border-color: var(--focus); }
+  button.topic.on { background: var(--focus); border-color: var(--focus); color: #081326; }
+  textarea { width: 100%; min-height: 96px; resize: vertical; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 9px; padding: 10px; font: inherit; }
+  .hint { color: var(--muted); font-size: 12px; }
+  #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--panel); border: 1px solid var(--line); padding: 8px 14px; border-radius: 9px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #toast.show { opacity: 1; } #toast.err { border-color: var(--delete); }
+  @media (max-width: 900px) {
+    main { display: flex; flex-direction: column; height: auto; }
+    #list { order: 3; border: 0; border-top: 1px solid var(--line); }
+    #stage { order: 1; height: 70vh; padding: 12px 16px; }
+    #side { order: 2; border: 0; }
+    .keys { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Lab review</h1>
+  <select id="round" aria-label="Round"></select>
+  <span class="progress" id="progress"></span>
+  <span class="keys"><kbd>←</kbd><kbd>→</kbd> move · <kbd>K</kbd> keep · <kbd>P</kbd> perfect · <kbd>D</kbd> delete · <kbd>N</kbd> note<span id="whyKeys"></span> · <kbd>U</kbd> undo · <kbd>Space</kbd> play</span>
+</header>
+<main>
+  <nav id="list" aria-label="Edits in this round"></nav>
+  <section id="stage"></section>
+  <aside id="side"></aside>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+const LABEL = { kept: "Kept", perfect: "Perfect", deleted: "Deleted", noted: "Noted", "": "Not reviewed" };
+let R = null, sel = 0;
+const $ = s => document.querySelector(s);
+// Taps not yet confirmed by the server, by edit id. On an edit with no verdict they wait for it (a tap alone isn't one).
+const held = {}, last = {}; let seq = 0;
+const taps = e => held[e.id] || e.topics || [];
+const verdictOf = e => ["kept", "perfect", "deleted"].includes(e.decision) ? e.decision : "";   // "noted" is a note, not a verdict
+let queue = Promise.resolve();   // one save at a time, in the order they were made: quick taps can't land out of order
+function post(body) { const p = queue.then(() => api("/api/decide", body)); queue = p.catch(() => {}); return p; }
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function toast(msg, err) {
+  const t = $("#toast"); t.textContent = msg; t.className = "show" + (err ? " err" : "");
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.className = "", err ? 5000 : 1400);
+}
+
+async function api(url, body) {
+  const r = await fetch(url, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+
+async function loadRounds() {
+  const rs = await api("/api/rounds");
+  $("#round").innerHTML = rs.map(r => `<option value="${esc(r.round)}">${esc(r.round)} · ${r.decided}/${r.total}</option>`).join("");
+  let want = null;
+  try { want = localStorage.getItem("labReviewRound"); } catch (e) {}
+  const first = rs.find(r => r.decided < r.total) || rs[0];
+  const pick = rs.find(r => r.round === want) || first;
+  if (pick) { $("#round").value = pick.round; await openRound(pick.round); }
+  else $("#stage").innerHTML = `<p class="gone">No rounds in library/_lab/rounds yet.</p>`;
+}
+
+async function openRound(name, keepSel) {
+  R = await api("/api/round/" + encodeURIComponent(name));
+  try { localStorage.setItem("labReviewRound", name); } catch (e) {}
+  const n = (R.topic_names || []).length;
+  $("#whyKeys").innerHTML = n ? ` · <kbd>1</kbd>–<kbd>${n}</kbd> why` : "";
+  if (!keepSel) { const i = R.edits.findIndex(e => !e.decision); sel = i < 0 ? 0 : i; }
+  renderList(); show(true);
+}
+
+function renderList() {
+  const done = R.edits.filter(e => e.decision).length;
+  $("#progress").innerHTML = `<b>${done}</b> of ${R.edits.length} reviewed`;
+  const opt = $("#round").selectedOptions[0]; if (opt) opt.textContent = `${R.round} · ${done}/${R.edits.length}`;
+  $("#list").innerHTML = R.edits.map((e, i) => `
+    <div class="item ${i === sel ? "sel" : ""}" data-i="${i}" role="button" tabindex="0" aria-label="${esc(e.id)}, ${LABEL[e.decision]}">
+      <span class="dot ${e.decision}"></span>
+      <span><span class="id">${esc(e.id.replace(/^R\d+_/, ""))}</span> <span class="chip">${esc(e.kind || "")}${e.song ? " · song" : ""}</span>
+      <div class="sub">${esc(e.caption || (e.lyrics ? "lyrics" : "") || e.story)}</div></span>
+    </div>`).join("");
+  document.querySelectorAll(".item").forEach(el => el.onclick = () => { sel = +el.dataset.i; renderList(); show(true); });
+  const s = document.querySelector(".item.sel"); if (s) s.scrollIntoView({ block: "nearest" });
+}
+
+function show(reloadVideo) {
+  const e = R.edits[sel]; if (!e) return;
+  if (reloadVideo) {
+    $("#stage").innerHTML = e.video
+      ? `<video src="${e.video}?t=${Date.now()}" controls autoplay loop playsinline></video>`
+      : `<p class="gone">${esc(e.id)}.mp4 isn't on disk any more${e.decision === "deleted" ? " (deleted)" : ""}.</p>`;
+  }
+  const m = e.song ? `${esc(e.song.name || "song")}${e.song.window ? " · window " + esc(e.song.window) : ""}` : "silent";
+  $("#side").innerHTML = `
+    <div><h2>${esc(e.id)}</h2></div>
+    <div class="meta"><span class="chip status" style="border-color:var(--${e.decision === "kept" ? "keep" : e.decision === "deleted" ? "delete" : e.decision || "line"})">${LABEL[e.decision]}</span>
+      <span class="chip">${esc(e.account || "")}</span><span class="chip">${esc(e.format || "")}</span><span class="chip">${m}</span>
+      <span class="chip">${e.sources} source${e.sources === 1 ? "" : "s"}</span></div>
+    ${e.exported ? `<div class="hint">In <b>${esc(e.account_name || e.account)}</b> exports, ready to post: library/${esc(e.exports)}/</div>`
+      : e.exports ? `<div class="hint">Perfect sends a copy to ${esc(e.account_name || e.account)}'s exports folder.</div>`
+      : `<div class="hint">No exports folder for account “${esc(e.account || "?")}” in your profile, so Perfect only trains the lab.</div>`}
+    ${e.caption ? `<div class="caption">“${esc(e.caption)}”</div>` : e.lyrics ? `<div class="caption hint">Lyric captions</div>` : ""}
+    <div class="btns">
+      <button class="keep ${e.decision === "kept" ? "on" : ""}" data-d="kept">Keep</button>
+      <button class="perfect ${e.decision === "perfect" ? "on" : ""}" data-d="perfect">Perfect</button>
+      <button class="delete ${e.decision === "deleted" ? "on" : ""}" data-d="deleted">Delete</button>
+    </div>
+    ${(R.topic_names || []).length ? `<div>
+      <span class="hint" id="whyLabel">Why: tap any that apply, or never (saved with the verdict)</span>
+      <div class="topics" role="group" aria-labelledby="whyLabel">${R.topic_names.map(([k, l], i) =>
+        `<button class="topic" data-t="${esc(k)}" aria-pressed="false"><kbd>${i + 1}</kbd>${esc(l)}</button>`).join("")}</div>
+    </div>` : ""}
+    <div>
+      <label class="hint" for="note">Your note (goes in the filename and the lab log, same as renaming in Finder)</label>
+      <textarea id="note" placeholder="what works, what doesn't…">${esc(e.note)}</textarea>
+    </div>
+    <div class="row2"><button id="saveNote">Save note only</button><button id="undo" ${verdictOf(e) ? "" : "disabled"}>Undo</button></div>
+    <div class="story">${esc(e.story)}${e.why ? "\n\n" + esc(e.why) : ""}</div>
+    <p class="hint">Delete moves the file to library/_to_delete (nothing is erased). Undo takes back the verdict and keeps the note and taps. Enter in the note saves it; Esc leaves the box.</p>`;
+  document.querySelectorAll(".btns button").forEach(b => b.onclick = () => decide(b.dataset.d));
+  document.querySelectorAll(".topic").forEach(b => b.onclick = () => tap(b.dataset.t));
+  drawTaps();
+  $("#saveNote").onclick = () => {
+    if (!($("#note")?.value || "").trim() && !taps(e).length && !e.decision) { toast("Write a note first", true); return; }
+    decide(verdictOf(e), true);   // no verdict: the server files it as "noted" (or clears it when the note and taps are empty)
+  };
+  $("#undo").onclick = () => decide("", false, true);
+  $("#note").onkeydown = ev => {
+    if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); $("#saveNote").click(); }
+    if (ev.key === "Escape") ev.target.blur();
+  };
+}
+
+function drawTaps() {
+  const e = R.edits[sel]; if (!e) return; const on = taps(e);
+  document.querySelectorAll(".topic").forEach(b => { const x = on.includes(b.dataset.t); b.classList.toggle("on", x); b.setAttribute("aria-pressed", String(x)); });
+}
+
+function tap(k) {
+  const e = R.edits[sel]; if (!e) return;
+  const order = R.topic_names.map(t => t[0]), cur = taps(e);
+  held[e.id] = (cur.includes(k) ? cur.filter(x => x !== k) : [...cur, k]).sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  drawTaps();
+  if (e.decision) decide(verdictOf(e), true, false, true);   // already decided or noted: saved now, with it
+}
+
+async function decide(d, stay, undo, quiet) {
+  const e = R.edits[sel]; if (!e) return;
+  if (undo && !verdictOf(e)) return;
+  // Undo takes back the verdict and nothing else: the saved note and taps stay in the file name, review.json, the log and the tag
+  const note = undo ? (e.note || "") : ($("#note")?.value || "").trim(), topics = taps(e), my = last[e.id] = ++seq;
+  try {
+    R = await post({ round: R.round, id: e.id, decision: d, note, topics });
+    if (last[e.id] === my) delete held[e.id];
+    const now = R.edits.find(x => x.id === e.id);
+    if (quiet) { renderList(); if (now && now.decision !== e.decision) show(false); else drawTaps(); return; }
+    toast(undo ? `${e.id} undone${note || topics.length ? ", note and taps kept" : ""}` : d === "perfect" && now && now.exported ? `${e.id}: Perfect → ${now.account_name || now.account} exports` : `${e.id}: ${LABEL[now ? now.decision : d]}`);
+    if (!stay && !undo && d) {
+      const nxt = R.edits.findIndex((x, i) => i > sel && !x.decision);
+      const any = R.edits.findIndex(x => !x.decision);
+      sel = nxt >= 0 ? nxt : any >= 0 ? any : sel;
+      renderList(); show(true);
+      if (any < 0) toast("Round reviewed. Tell Claude your notes are in.");
+    } else { renderList(); show(false); }
+  } catch (err) { toast(err.message, true); }
+}
+
+document.addEventListener("keydown", ev => {
+  if (!R || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  const typing = /TEXTAREA|INPUT|SELECT/.test(document.activeElement?.tagName);
+  if (typing) return;
+  const v = document.querySelector("video");
+  const k = ev.key.toLowerCase();
+  if (k === "arrowright" || k === "arrowleft") { sel = Math.max(0, Math.min(R.edits.length - 1, sel + (k === "arrowright" ? 1 : -1))); renderList(); show(true); ev.preventDefault(); }
+  else if (k === "k") decide("kept"); else if (k === "p") decide("perfect"); else if (k === "d") decide("deleted");
+  else if (k === "u") decide("", false, true);
+  else if (k === "n") { ev.preventDefault(); $("#note")?.focus(); }
+  else if (/^[1-9]$/.test(k) && (R.topic_names || [])[+k - 1]) { ev.preventDefault(); tap(R.topic_names[+k - 1][0]); }
+  else if (k === " " && v) { ev.preventDefault(); v.paused ? v.play() : v.pause(); }
+});
+$("#round").onchange = ev => openRound(ev.target.value);
+loadRounds().catch(err => { $("#stage").innerHTML = `<p class="gone">Couldn't load rounds: ${esc(err.message)}</p>`; });
+</script>
+</body>
+</html>

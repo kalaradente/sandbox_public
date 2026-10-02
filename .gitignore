@@ -1,0 +1,9 @@
+# Each person's footage, indexes, lab and settings: never in git (the starter pack carries the person's).
+/library/
+.claude/settings.local.json
+# Machine-built
+__pycache__/
+*.pyc
+_scripts/studies/ocr
+.DS_Store
+_scripts/vision_track
